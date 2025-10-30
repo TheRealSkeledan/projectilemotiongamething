@@ -14,19 +14,19 @@ public class JustACircle {
     public static final int fps = 120;
     public static final double delta_t = 1.0 / fps;
     public static final double g = -980.66;
-    public static final int width = 640;
-    public static final int height = 480;
+    public static final int width = 1280;
+    public static final int height = 720;
 
     public static Circle player = new Circle(320, 40, 15);
 
-    public static Circle entity = new Circle(40, 120, 55);
+    public static Circle entity = new Circle(40, 120, 58);
 
     public static BufferedImage[] entityFrames;
     public static int entityFrameIndex = 0;
     public static double entityAnimTimer = 0;
 
     public static int score = 0;
-    public static double enemySpeed = 1.8;
+    public static double enemySpeed = 3;
     public static double projectileRadius = 6;
     public static double projectileSpawnCooldown = 0.12;
     public static double timeSinceLastShot = projectileSpawnCooldown;
@@ -50,11 +50,6 @@ public class JustACircle {
             BufferedImage spriteSheet = ImageIO.read(
                     Objects.requireNonNull(JustACircle.class.getResource("/entityMoving.png"))
             );
-
-            if (spriteSheet == null) {
-                System.out.println("Entity spritesheet not found: /entityMoving.png");
-                return;
-            }
 
             int sheetW = spriteSheet.getWidth();
             int sheetH = spriteSheet.getHeight();
@@ -119,20 +114,20 @@ public class JustACircle {
             drawBackground();
             enemySpeed = 1.8 + 0.05 * score;
 
+            enemySpeed = 3 + (0.5 * score);
+
             if (StdDraw.isKeyPressed(KeyEvent.VK_A)) player.move(-4, 0);
             if (StdDraw.isKeyPressed(KeyEvent.VK_D)) player.move(4, 0);
             if (player.getX() - player.getRadius() < 0) player.move((player.getRadius() - player.getX()), 0);
             if (player.getX() + player.getRadius() > width) player.move((width - player.getRadius() - player.getX()), 0);
 
-            if (StdDraw.isKeyPressed(KeyEvent.VK_UP)) power += 2;
-            if (StdDraw.isKeyPressed(KeyEvent.VK_DOWN)) power -= 2;
-            if (StdDraw.isKeyPressed(KeyEvent.VK_LEFT)) angle += 0.8;
-            if (StdDraw.isKeyPressed(KeyEvent.VK_RIGHT)) angle -= 0.8;
+            if (StdDraw.isKeyPressed(KeyEvent.VK_UP)) power += 4;
+            if (StdDraw.isKeyPressed(KeyEvent.VK_DOWN)) power -= 4;
+            if (StdDraw.isKeyPressed(KeyEvent.VK_LEFT)) angle += 1.5;
+            if (StdDraw.isKeyPressed(KeyEvent.VK_RIGHT)) angle -= 1.5;
 
             if (power < 80) power = 80;
             if (power > 900) power = 900;
-            if (angle < 10) angle = 10;
-            if (angle > 170) angle = 170;
 
             StdDraw.setPenColor(Color.WHITE);
             for (int i = 1; i <= 30; i++) {
@@ -149,9 +144,9 @@ public class JustACircle {
             StdDraw.line(player.getX(), player.getY(), arrowX, arrowY);
 
             StdDraw.setPenColor(Color.WHITE);
-            StdDraw.text(120, 460, "Angle: " + Math.round(angle) + "°");
-            StdDraw.text(120, 440, "Power: " + Math.round(power));
-            StdDraw.text(120, 420, "Move: A/D   Aim: Arrows   Shoot: SPACE");
+            StdDraw.text(120, 600, "Angle: " + Math.round(angle) + "°");
+            StdDraw.text(120, 580, "Power: " + Math.round(power));
+            StdDraw.text(120, 560, "Move: A/D   Aim: Arrows   Shoot: SPACE");
 
             timeSinceLastShot += delta_t;
             boolean spaceNow = StdDraw.isKeyPressed(KeyEvent.VK_SPACE);
@@ -179,7 +174,7 @@ public class JustACircle {
                 if (Math.sqrt(dx * dx + dy * dy) <= p.getRadius() + entity.getRadius()) {
                     score++;
                     it.remove();
-                    entity = new Circle(-40, 120 + Math.random() * 200, 55);
+                    entity = new Circle(-40, 120 + Math.random() * 200, 58);
                     enemySpeed += 0.05;
                     continue;
                 }
@@ -223,7 +218,7 @@ public class JustACircle {
             }
 
             if (entity.getX() > width + entity.getRadius()) {
-                entity = new Circle(-40, 120 + Math.random() * 200, 55);
+                entity = new Circle(-40, 120 + Math.random() * 200, 58);
             }
 
             double dxPE = player.getX() - entity.getX();
@@ -273,7 +268,7 @@ public class JustACircle {
             for (Projectile p : projectiles) p.draw();
 
             StdDraw.setPenColor(Color.WHITE);
-            StdDraw.text(550, 460, "Score: " + score);
+            StdDraw.text(550, 600, "Score: " + score);
 
             StdDraw.show();
             StdDraw.pause(1000 / fps);
@@ -420,7 +415,7 @@ public class JustACircle {
         int h = img.getHeight();
         BufferedImage flipped = new BufferedImage(w, h, img.getType());
         Graphics2D g2d = flipped.createGraphics();
-        g2d.drawImage(img, 0, 0, w, h, w, 0, 0, h, null); // flip horizontally
+        g2d.drawImage(img, 0, 0, w, h, w, 0, 0, h, null);
         g2d.dispose();
         return flipped;
     }
