@@ -29,16 +29,16 @@ public class Circle {
     }
 
     public void checkBoundaries() {
-        if((x + radius) > 640) {
-            x = 640 - radius;
+        if((x + radius) > 1280) {
+            x = 1280 - radius;
         }
 
         if((x - radius) < 0) {
             x = 0 + radius;
         }
 
-        if((y + radius) > 480) {
-            y = 480 - radius;
+        if((y + radius) > 720) {
+            y = 720 - radius;
         }
 
         if((y - radius) < 0) {

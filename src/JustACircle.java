@@ -14,8 +14,8 @@ public class JustACircle {
     public static final int fps = 120;
     public static final double delta_t = 1.0 / fps;
     public static final double g = -980.66;
-    public static final int width = 640;
-    public static final int height = 480;
+    public static final int width = 1280;
+    public static final int height = 720;
 
     public static Circle player = new Circle(320, 40, 15);
 
@@ -26,7 +26,7 @@ public class JustACircle {
     public static double entityAnimTimer = 0;
 
     public static int score = 0;
-    public static double enemySpeed = 1.8;
+    public static double enemySpeed = 3;
     public static double projectileRadius = 6;
     public static double projectileSpawnCooldown = 0.12;
     public static double timeSinceLastShot = projectileSpawnCooldown;
@@ -113,6 +113,8 @@ public class JustACircle {
         while (true) {
             drawBackground();
 
+            enemySpeed = 3 + (0.5 * score);
+
             if (StdDraw.isKeyPressed(KeyEvent.VK_A)) player.move(-4, 0);
             if (StdDraw.isKeyPressed(KeyEvent.VK_D)) player.move(4, 0);
             if (player.getX() - player.getRadius() < 0) player.move((player.getRadius() - player.getX()), 0);
@@ -141,9 +143,9 @@ public class JustACircle {
             StdDraw.line(player.getX(), player.getY(), arrowX, arrowY);
 
             StdDraw.setPenColor(Color.WHITE);
-            StdDraw.text(120, 460, "Angle: " + Math.round(angle) + "°");
-            StdDraw.text(120, 440, "Power: " + Math.round(power));
-            StdDraw.text(120, 420, "Move: A/D   Aim: Arrows   Shoot: SPACE");
+            StdDraw.text(120, 600, "Angle: " + Math.round(angle) + "°");
+            StdDraw.text(120, 580, "Power: " + Math.round(power));
+            StdDraw.text(120, 560, "Move: A/D   Aim: Arrows   Shoot: SPACE");
 
             timeSinceLastShot += delta_t;
             boolean spaceNow = StdDraw.isKeyPressed(KeyEvent.VK_SPACE);
@@ -267,7 +269,7 @@ public class JustACircle {
             for (Projectile p : projectiles) p.draw();
 
             StdDraw.setPenColor(Color.WHITE);
-            StdDraw.text(550, 460, "Score: " + score);
+            StdDraw.text(550, 600, "Score: " + score);
 
             StdDraw.show();
             StdDraw.pause(1000 / fps);
