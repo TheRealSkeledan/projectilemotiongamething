@@ -17,7 +17,6 @@ public class Circle {
 
     // Functions
     public void draw() {
-        StdDraw.setPenRadius(5);
         StdDraw.setPenColor(Color.WHITE);
         StdDraw.filledCircle(x, y, radius);
     }
