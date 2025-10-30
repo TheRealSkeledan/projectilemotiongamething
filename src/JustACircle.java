@@ -19,7 +19,7 @@ public class JustACircle {
 
     public static Circle player = new Circle(320, 40, 15);
 
-    public static Circle entity = new Circle(40, 120, 55);
+    public static Circle entity = new Circle(40, 120, 58);
 
     public static BufferedImage[] entityFrames;
     public static int entityFrameIndex = 0;
@@ -50,11 +50,6 @@ public class JustACircle {
             BufferedImage spriteSheet = ImageIO.read(
                     Objects.requireNonNull(JustACircle.class.getResource("/entityMoving.png"))
             );
-
-            if (spriteSheet == null) {
-                System.out.println("Entity spritesheet not found: /entityMoving.png");
-                return;
-            }
 
             int sheetW = spriteSheet.getWidth();
             int sheetH = spriteSheet.getHeight();
@@ -123,15 +118,13 @@ public class JustACircle {
             if (player.getX() - player.getRadius() < 0) player.move((player.getRadius() - player.getX()), 0);
             if (player.getX() + player.getRadius() > width) player.move((width - player.getRadius() - player.getX()), 0);
 
-            if (StdDraw.isKeyPressed(KeyEvent.VK_UP)) power += 2;
-            if (StdDraw.isKeyPressed(KeyEvent.VK_DOWN)) power -= 2;
-            if (StdDraw.isKeyPressed(KeyEvent.VK_LEFT)) angle += 0.8;
-            if (StdDraw.isKeyPressed(KeyEvent.VK_RIGHT)) angle -= 0.8;
+            if (StdDraw.isKeyPressed(KeyEvent.VK_UP)) power += 4;
+            if (StdDraw.isKeyPressed(KeyEvent.VK_DOWN)) power -= 4;
+            if (StdDraw.isKeyPressed(KeyEvent.VK_LEFT)) angle += 1.5;
+            if (StdDraw.isKeyPressed(KeyEvent.VK_RIGHT)) angle -= 1.5;
 
             if (power < 80) power = 80;
             if (power > 900) power = 900;
-            if (angle < 10) angle = 10;
-            if (angle > 170) angle = 170;
 
             StdDraw.setPenColor(Color.WHITE);
             for (int i = 1; i <= 30; i++) {
@@ -178,7 +171,7 @@ public class JustACircle {
                 if (Math.sqrt(dx * dx + dy * dy) <= p.getRadius() + entity.getRadius()) {
                     score++;
                     it.remove();
-                    entity = new Circle(-40, 120 + Math.random() * 200, 55);
+                    entity = new Circle(-40, 120 + Math.random() * 200, 58);
                     enemySpeed += 0.05;
                     continue;
                 }
@@ -224,7 +217,7 @@ public class JustACircle {
             }
 
             if (entity.getX() > width + entity.getRadius()) {
-                entity = new Circle(-40, 120 + Math.random() * 200, 55);
+                entity = new Circle(-40, 120 + Math.random() * 200, 58);
             }
 
             double dxPE = player.getX() - entity.getX();
@@ -421,7 +414,7 @@ public class JustACircle {
         int h = img.getHeight();
         BufferedImage flipped = new BufferedImage(w, h, img.getType());
         Graphics2D g2d = flipped.createGraphics();
-        g2d.drawImage(img, 0, 0, w, h, w, 0, 0, h, null); // flip horizontally
+        g2d.drawImage(img, 0, 0, w, h, w, 0, 0, h, null);
         g2d.dispose();
         return flipped;
     }
