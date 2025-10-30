@@ -117,6 +117,7 @@ public class JustACircle {
 
         while (true) {
             drawBackground();
+            enemySpeed = 1.8 + 0.05 * score;
 
             if (StdDraw.isKeyPressed(KeyEvent.VK_A)) player.move(-4, 0);
             if (StdDraw.isKeyPressed(KeyEvent.VK_D)) player.move(4, 0);
@@ -184,18 +185,16 @@ public class JustACircle {
                 }
             }
 
-            if (enemyMovingRight) {
-                entity.move(enemySpeed, 0);
-            } else {
-                entity.move(-enemySpeed, 0);
-            }
+            double dxFollow = player.getX() - entity.getX();
+            double dyFollow = player.getY() - entity.getY();
+            double distance = Math.sqrt(dxFollow * dxFollow + dyFollow * dyFollow);
 
-            if (entity.getX() + entity.getRadius() >= width) {
-                entity.move(width - (entity.getX() + entity.getRadius()), 0);
-                enemyMovingRight = false;
-            } else if (entity.getX() - entity.getRadius() <= 0) {
-                entity.move(-(entity.getX() - entity.getRadius()), 0);
-                enemyMovingRight = true;
+            if (distance > 1) {
+                double vxEnemy = (dxFollow / distance) * enemySpeed;
+                double vyEnemy = (dyFollow / distance) * enemySpeed * 0.7;
+                entity.move(vxEnemy, vyEnemy);
+
+                enemyMovingRight = vxEnemy >= 0;
             }
 
             if (entityFrames != null) {
