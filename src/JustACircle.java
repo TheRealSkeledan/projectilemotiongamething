@@ -10,7 +10,7 @@ import javax.sound.sampled.*;
 import java.util.ArrayList;
 
 public class JustACircle {
-    public static final int fps = 20;
+    public static final int fps = 15;
     public static final double delta_t = 1.0 / fps;
     public static final double g = -980.66;
     public static final int width = 1280;
@@ -44,7 +44,7 @@ public class JustACircle {
 
     static double bgX1 = 0;
     static double bgX2 = width;
-    static double bgSpeed = 40;
+    static double bgSpeed = 70;
 
     static BufferedImage[] introFrames;
     static int introFrameIndex = 0;
