@@ -10,7 +10,7 @@ import javax.sound.sampled.*;
 import java.util.ArrayList;
 
 public class JustACircle {
-    public static final int fps = 15;
+    public static final int fps = 5;
     public static final double delta_t = 1.0 / fps;
     public static final double g = -980.66;
     public static final int width = 1280;
@@ -205,7 +205,7 @@ public class JustACircle {
         }
     }
 
-    static void updateChase() {
+    static void updateChase() throws IOException {
         drawScrollingBackground();
 
         player.x = width / 2.0;
@@ -298,7 +298,7 @@ public class JustACircle {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         try {
             backgroundImg = ImageIO.read(
                     Objects.requireNonNull(JustACircle.class.getResource("/bg.png"))
@@ -393,17 +393,26 @@ public class JustACircle {
         StdDraw.filledRectangle(width / 2.0, 20, width / 2.0, 20);
     }
 
-    private static void deathScreen() {
+    private static void deathScreen() throws IOException {
         if (bgm != null && bgm.isRunning()) {
             bgm.stop();
             bgm.close();
         }
 
+        BufferedImage backgroundImg = ImageIO.read(
+                Objects.requireNonNull(JustACircle.class.getResource("/background.png"))
+        );
+
+        File temp = File.createTempFile("background_", ".png");
+        ImageIO.write(backgroundImg, "png", temp);
+        temp.deleteOnExit();
+        String backgroundPath = temp.getAbsolutePath();
+
         playBackgroundMusic("/deathBgm.wav");
 
         StdDraw.clear(Color.BLACK);
         StdDraw.picture(width / 2.0, height / 2.0,
-                bgPath,
+                backgroundPath,
                 width, height);
         StdDraw.setPenColor(Color.RED);
         StdDraw.text(width / 2.0, height / 2.0, "YOU DIED");
