@@ -5,13 +5,12 @@ import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Objects;
 import javax.sound.sampled.*;
+import java.util.ArrayList;
 
 public class JustACircle {
-    public static final int fps = 120;
+    public static final int fps = 20;
     public static final double delta_t = 1.0 / fps;
     public static final double g = -980.66;
     public static final int width = 1280;
@@ -31,8 +30,6 @@ public class JustACircle {
     public static double projectileSpawnCooldown = 0.12;
     public static double timeSinceLastShot = projectileSpawnCooldown;
 
-    public static ArrayList<Projectile> projectiles = new ArrayList<>();
-
     public static boolean lastSpace = false;
 
     private static String[] entityFramePaths;
@@ -44,6 +41,127 @@ public class JustACircle {
     private static BufferedImage backgroundImg;
 
     public static boolean enemyMovingRight = true;
+
+    static double bgX1 = 0;
+    static double bgX2 = width;
+    static double bgSpeed = 40;
+
+    static BufferedImage[] introFrames;
+    static int introFrameIndex = 0;
+    static double introTimer = 0;
+    static final double INTRO_FRAME_TIME = 0.1;
+
+    static String bgPath;
+
+    static final double ENTITY_SCALE = 1.5;
+
+    enum GameState {
+        WAITING_TO_START,
+        INTRO,
+        CHASE,
+        DEAD
+    }
+
+    static GameState gameState = GameState.WAITING_TO_START;
+
+    static class Obstacle {
+        double x, y, w, h;
+    }
+
+    static ArrayList<Obstacle> obstacles = new ArrayList<>();
+    static double obstacleTimer = 0;
+
+    static BufferedImage obstacleImg;
+    static String obstaclePath;
+    static final double OBSTACLE_SCALE = 1;
+
+    static void drawStaticBackground() {
+        if (bgPath == null) return;
+
+        StdDraw.picture(
+                width / 2.0,
+                height / 2.0,
+                bgPath,
+                width,
+                height
+        );
+    }
+
+    static void drawScrollingBackground() {
+        double bgScale = height / (double) backgroundImg.getHeight();
+        double bgW = backgroundImg.getWidth() * bgScale;
+
+        bgX1 -= bgSpeed;
+        bgX2 -= bgSpeed;
+
+        if (bgX1 <= -bgW) bgX1 = bgX2 + bgW;
+        if (bgX2 <= -bgW) bgX2 = bgX1 + bgW;
+
+        StdDraw.picture(bgX1 + bgW / 2, height / 2,
+                bgPath,
+                bgW, height);
+        StdDraw.picture(bgX2 + bgW / 2, height / 2,
+                bgPath,
+                bgW, height);
+    }
+
+    static void loadIntroSprites() {
+        try {
+            BufferedImage sheet = ImageIO.read(
+                    Objects.requireNonNull(JustACircle.class.getResource("/entitySpawn.png"))
+            );
+
+            int frameW = 128;
+            int frameH = 128;
+
+            int cols = sheet.getWidth() / frameW;
+            int rows = sheet.getHeight() / frameH;
+
+            introFrames = new BufferedImage[cols * rows];
+            int idx = 0;
+
+            for (int y = 0; y < rows; y++) {
+                for (int x = 0; x < cols; x++) {
+                    introFrames[idx++] =
+                            sheet.getSubimage(x * frameW, y * frameH, frameW, frameH);
+                }
+            }
+
+            System.out.println("Loaded " + idx + " intro frames");
+
+        } catch (Exception e) {
+            System.out.println("Intro load failed: " + e);
+            introFrames = null;
+        }
+    }
+
+    static void updateIntro() {
+        introTimer += delta_t;
+
+        if (introTimer >= INTRO_FRAME_TIME) {
+            introFrameIndex++;
+            introTimer = 0;
+
+            if (introFrameIndex >= introFrames.length) {
+                gameState = GameState.CHASE;
+                drawScrollingBackground();
+                return;
+            }
+        }
+
+        drawStaticBackground();
+
+        BufferedImage frame = introFrames[introFrameIndex];
+        StdDraw.picture(
+                entity.x + 100,
+                entity.y,
+                tempImagePath(frame),
+                frame.getWidth() * ENTITY_SCALE,
+                frame.getHeight() * ENTITY_SCALE
+        );
+
+        player.draw();
+    }
 
     private static void loadEntitySprites(int frameW, int frameH) {
         try {
@@ -87,11 +205,128 @@ public class JustACircle {
         }
     }
 
+    static void updateChase() {
+        drawScrollingBackground();
+
+        player.x = width / 2.0;
+
+        boolean space = StdDraw.isKeyPressed(KeyEvent.VK_SPACE);
+        if (space && !lastSpace && onGround) {
+            playerVy = 650;
+            onGround = false;
+        }
+        lastSpace = space;
+
+        playerVy += g * delta_t;
+        player.y += playerVy * delta_t;
+
+        if (player.y - player.radius <= 40) {
+            player.y = 40 + player.radius;
+            playerVy = 0;
+            onGround = true;
+        }
+
+        obstacleTimer += delta_t;
+
+        if (obstacleTimer >= 1.3) {
+            Obstacle o = new Obstacle();
+
+            o.w = obstacleImg.getWidth() * OBSTACLE_SCALE;
+            o.h = obstacleImg.getHeight() * OBSTACLE_SCALE;
+
+            o.x = width + o.w;
+            o.y = 40; // ground
+
+            obstacles.add(o);
+            obstacleTimer = 0;
+        }
+
+        for (int i = obstacles.size() - 1; i >= 0; i--) {
+            Obstacle o = obstacles.get(i);
+
+            o.x -= bgSpeed;
+
+            StdDraw.picture(
+                    o.x,
+                    o.y + o.h / 2,
+                    obstaclePath,
+                    o.w,
+                    o.h
+            );
+
+            // collision (AABB vs circle)
+            double closestX = Math.max(o.x - o.w / 2,
+                    Math.min(player.x, o.x + o.w / 2));
+            double closestY = Math.max(o.y,
+                    Math.min(player.y, o.y + o.h));
+
+            double dx = player.x - closestX;
+            double dy = player.y - closestY;
+
+            if (dx * dx + dy * dy < player.radius * player.radius) {
+                gameState = GameState.DEAD;
+                deathScreen();
+            }
+
+            if (o.x + o.w < 0) {
+                obstacles.remove(i);
+            }
+        }
+
+        entityAnimTimer += delta_t;
+        if (entityAnimTimer >= 0.1) {
+            entityFrameIndex = (entityFrameIndex + 1) % entityFrames.length;
+            entityAnimTimer = 0;
+        }
+
+        BufferedImage frame = entityFrames[entityFrameIndex];
+        StdDraw.picture(
+                entity.x + 100,
+                entity.y,
+                tempImagePath(frame),
+                frame.getWidth() * ENTITY_SCALE,
+                frame.getHeight() * ENTITY_SCALE
+        );
+
+        player.draw();
+
+        double dx = player.x - entity.x;
+        double dy = player.y - entity.y;
+        if (Math.sqrt(dx * dx + dy * dy) <= player.radius + entity.radius) {
+            gameState = GameState.DEAD;
+            deathScreen();
+        }
+    }
+
     public static void main(String[] args) {
         try {
-            backgroundImg = ImageIO.read(Objects.requireNonNull(JustACircle.class.getResource("/background.png")));
-        } catch (IOException e) {
-            System.out.println("Failed to load background image: " + e);
+            backgroundImg = ImageIO.read(
+                    Objects.requireNonNull(JustACircle.class.getResource("/bg.png"))
+            );
+
+            File temp = File.createTempFile("bg_", ".png");
+            ImageIO.write(backgroundImg, "png", temp);
+            temp.deleteOnExit();
+            bgPath = temp.getAbsolutePath();
+
+        } catch (Exception e) {
+            System.out.println("Failed to load background image");
+            e.printStackTrace();
+        }
+
+        try {
+            obstacleImg = ImageIO.read(
+                    Objects.requireNonNull(JustACircle.class.getResource("/obstacle.png"))
+            );
+
+            File temp = File.createTempFile("obstacle_", ".png");
+            ImageIO.write(obstacleImg, "png", temp);
+            temp.deleteOnExit();
+            obstaclePath = temp.getAbsolutePath();
+
+        } catch (Exception e) {
+            System.out.println("Failed to load obstacle image");
+            e.printStackTrace();
         }
 
         StdDraw.setCanvasSize(width, height);
@@ -102,173 +337,36 @@ public class JustACircle {
         URL url = JustACircle.class.getResource("/bgm.wav");
         System.out.println(url);
 
+        loadIntroSprites();
+        loadEntitySprites(128, 128);
         playBackgroundMusic("/bgm.wav");
 
-        playIntroAnimation();
-        loadEntitySprites(128, 128);
-
-        double angle = 90;
-        double power = 400;
-
         while (true) {
-            drawBackground();
-            enemySpeed = 1.8 + 0.05 * score;
+            StdDraw.clear();
 
-            enemySpeed = 3 + (0.5 * score);
+            switch (gameState) {
 
-            if (StdDraw.isKeyPressed(KeyEvent.VK_A)) player.move(-4, 0);
-            if (StdDraw.isKeyPressed(KeyEvent.VK_D)) player.move(4, 0);
-            if (player.getX() - player.getRadius() < 0) player.move((player.getRadius() - player.getX()), 0);
-            if (player.getX() + player.getRadius() > width) player.move((width - player.getRadius() - player.getX()), 0);
+                case WAITING_TO_START:
+                    gameState = GameState.INTRO;
+                    break;
 
-            if (StdDraw.isKeyPressed(KeyEvent.VK_UP)) power += 4;
-            if (StdDraw.isKeyPressed(KeyEvent.VK_DOWN)) power -= 4;
-            if (StdDraw.isKeyPressed(KeyEvent.VK_LEFT)) angle += 1.5;
-            if (StdDraw.isKeyPressed(KeyEvent.VK_RIGHT)) angle -= 1.5;
+                case INTRO:
+                    updateIntro();
+                    if (gameState == GameState.CHASE) {
+                        player.y = 40 + player.radius;
+                        playerVy = 0;
+                        onGround = true;
+                    }
+                    break;
 
-            if (power < 80) power = 80;
-            if (power > 900) power = 900;
 
-            StdDraw.setPenColor(Color.WHITE);
-            for (int i = 1; i <= 30; i++) {
-                double t = i * 0.06;
-                double px = player.getX() + power * Math.cos(Math.toRadians(angle)) * t * 0.05;
-                double py = player.getY() + power * Math.sin(Math.toRadians(angle)) * t * 0.05 + 0.5 * g * Math.pow(t * 0.05, 2);
-                if (py < 0) break;
-                StdDraw.filledCircle(px, py, 2);
+                case CHASE:
+                    updateChase();
+                    break;
+
+                case DEAD:
+                    break;
             }
-
-            double arrowX = player.getX() + 70 * Math.cos(Math.toRadians(angle));
-            double arrowY = player.getY() + 70 * Math.sin(Math.toRadians(angle));
-            StdDraw.setPenColor(Color.RED);
-            StdDraw.line(player.getX(), player.getY(), arrowX, arrowY);
-
-            StdDraw.setPenColor(Color.WHITE);
-            StdDraw.text(120, 600, "Angle: " + Math.round(angle) + "°");
-            StdDraw.text(120, 580, "Power: " + Math.round(power));
-            StdDraw.text(120, 560, "Move: A/D   Aim: Arrows   Shoot: SPACE");
-
-            timeSinceLastShot += delta_t;
-            boolean spaceNow = StdDraw.isKeyPressed(KeyEvent.VK_SPACE);
-            if (spaceNow && (!lastSpace || timeSinceLastShot >= projectileSpawnCooldown)) {
-                double vx = power * Math.cos(Math.toRadians(angle));
-                double vy = power * Math.sin(Math.toRadians(angle));
-                projectiles.add(new Projectile(player.getX(), player.getY(), 6, vx, vy));
-                timeSinceLastShot = 0;
-            }
-            lastSpace = spaceNow;
-
-            Iterator<Projectile> it = projectiles.iterator();
-            while (it.hasNext()) {
-                Projectile p = it.next();
-                p.vy += g * delta_t;
-                p.move(p.vx * delta_t, p.vy * delta_t);
-
-                if (p.getY() + p.getRadius() < 0 || p.getX() < -100 || p.getX() > width + 100) {
-                    it.remove();
-                    continue;
-                }
-
-                double dx = p.getX() - entity.getX();
-                double dy = p.getY() - entity.getY();
-                if (Math.sqrt(dx * dx + dy * dy) <= p.getRadius() + entity.getRadius()) {
-                    score++;
-                    it.remove();
-                    entity = new Circle(-40, 120 + Math.random() * 200, 58);
-                    enemySpeed += 0.05;
-                    continue;
-                }
-            }
-
-            double dxFollow = player.getX() - entity.getX();
-            double dyFollow = player.getY() - entity.getY();
-            double distance = Math.sqrt(dxFollow * dxFollow + dyFollow * dyFollow);
-
-            if (distance > 1) {
-                double vxEnemy = (dxFollow / distance) * enemySpeed;
-                double vyEnemy = (dyFollow / distance) * enemySpeed * 0.7;
-                entity.move(vxEnemy, vyEnemy);
-
-                enemyMovingRight = vxEnemy >= 0;
-            }
-
-            if (entityFrames != null) {
-                entityAnimTimer += delta_t;
-                if (entityAnimTimer >= 0.1) {
-                    entityFrameIndex = (entityFrameIndex + 1) % entityFrames.length;
-                    entityAnimTimer = 0;
-                }
-                BufferedImage currentFrame = entityFrames[entityFrameIndex];
-                double scale = 1.5;
-
-                if (entityFramesCached) {
-                    String framePath = entityFramePaths[entityFrameIndex];
-                    BufferedImage frameToDraw = enemyMovingRight ? currentFrame : flipImageHorizontally(currentFrame);
-
-                    String tempPath = tempImagePath(frameToDraw);
-
-                    StdDraw.picture(entity.getX(), entity.getY(),
-                            tempPath,
-                            frameToDraw.getWidth() * scale,
-                            frameToDraw.getHeight() * scale);
-                }
-
-            } else {
-                entity.draw();
-            }
-
-            if (entity.getX() > width + entity.getRadius()) {
-                entity = new Circle(-40, 120 + Math.random() * 200, 58);
-            }
-
-            double dxPE = player.getX() - entity.getX();
-            double dyPE = player.getY() - entity.getY();
-            if (Math.sqrt(dxPE * dxPE + dyPE * dyPE) <= player.getRadius() + entity.getRadius()) {
-                deathScreen();
-                return;
-            }
-
-            if (StdDraw.isKeyPressed(KeyEvent.VK_W) && onGround) {
-                playerVy = 600;
-                onGround = false;
-            }
-
-            playerVy += g * delta_t;
-            player.move(0, playerVy * delta_t);
-
-            if (player.getY() - player.getRadius() <= 40) {
-                playerVy = 0;
-                onGround = true;
-                player.move(0, 40 + player.getRadius() - player.getY());
-            }
-
-            if (entityFrames != null) {
-                entityAnimTimer += delta_t;
-                if (entityAnimTimer >= 0.1) {
-                    entityFrameIndex = (entityFrameIndex + 1) % entityFrames.length;
-                    entityAnimTimer = 0;
-                }
-                BufferedImage currentFrame = entityFrames[entityFrameIndex];
-                double scale = 1.5;
-                if (entityFramesCached) {
-                    String framePath = entityFramePaths[entityFrameIndex];
-                    StdDraw.picture(
-                            entity.getX(), entity.getY(),
-                            framePath,
-                            currentFrame.getWidth() * 1.5,
-                            currentFrame.getHeight() * 1.5
-                    );
-                }
-            } else {
-                entity.draw();
-            }
-
-            player.draw();
-            StdDraw.setPenColor(Color.YELLOW);
-            for (Projectile p : projectiles) p.draw();
-
-            StdDraw.setPenColor(Color.WHITE);
-            StdDraw.text(550, 600, "Score: " + score);
 
             StdDraw.show();
             StdDraw.pause(1000 / fps);
@@ -276,8 +374,10 @@ public class JustACircle {
     }
 
     private static String tempImagePath(BufferedImage img) {
+        if (img == null) return null;
+
         try {
-            File temp = File.createTempFile("entityFrame_", ".png");
+            File temp = File.createTempFile("img_", ".png");
             ImageIO.write(img, "png", temp);
             temp.deleteOnExit();
             return temp.getAbsolutePath();
@@ -303,21 +403,20 @@ public class JustACircle {
 
         StdDraw.clear(Color.BLACK);
         StdDraw.picture(width / 2.0, height / 2.0,
-                tempImagePath(backgroundImg),
+                bgPath,
                 width, height);
         StdDraw.setPenColor(Color.RED);
         StdDraw.text(width / 2.0, height / 2.0, "YOU DIED");
         StdDraw.setPenColor(Color.BLACK);
-        StdDraw.text(width / 2.0, height / 2.0 - 30, "Final Score: " + score);
         StdDraw.show();
         StdDraw.pause(3000);
     }
 
     private static void playIntroAnimation() {
         try {
-            BufferedImage spriteSheet = ImageIO.read(Objects.requireNonNull(JustACircle.class.getResource("/entityWakingUp.png")));
+            BufferedImage spriteSheet = ImageIO.read(Objects.requireNonNull(JustACircle.class.getResource("/entitySpawn.png")));
             if (spriteSheet == null) {
-                System.out.println("Spritesheet not found: " + "/entityWakingUp.png");
+                System.out.println("Spritesheet not found: " + "/entitySpawn.png");
                 return;
             }
 
@@ -339,7 +438,7 @@ public class JustACircle {
                 StdDraw.picture(
                         width / 2.0,
                         height / 2.0,
-                        temp.getAbsolutePath(),
+                        bgPath,
                         128 * scale,
                         128 * scale
                 );
@@ -350,33 +449,6 @@ public class JustACircle {
 
         } catch (Exception e) {
             System.out.println("Failed to load intro: " + e);
-        }
-    }
-
-    static class Projectile {
-        double x, y;
-        double radius;
-        double vx, vy;
-
-        public Projectile(double x, double y, double r, double vx, double vy) {
-            this.x = x;
-            this.y = y;
-            this.radius = r;
-            this.vx = vx;
-            this.vy = vy;
-        }
-
-        public void move(double dx, double dy) {
-            this.x += dx;
-            this.y += dy;
-        }
-
-        public double getX() { return x; }
-        public double getY() { return y; }
-        public double getRadius() { return radius; }
-
-        public void draw() {
-            StdDraw.filledCircle(x, y, radius);
         }
     }
 

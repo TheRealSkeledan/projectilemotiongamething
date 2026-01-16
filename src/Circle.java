@@ -21,31 +21,6 @@ public class Circle {
         StdDraw.filledCircle(x, y, radius);
     }
 
-    public void move(double dx, double dy) {
-        x += dx;
-        y += dy;
-
-        checkBoundaries();
-    }
-
-    public void checkBoundaries() {
-        if((x + radius) > 1280) {
-            x = 1280 - radius;
-        }
-
-        if((x - radius) < 0) {
-            x = 0 + radius;
-        }
-
-        if((y + radius) > 720) {
-            y = 720 - radius;
-        }
-
-        if((y - radius) < 0) {
-            y = 0 + radius;
-        }
-    }
-
     // Getters
     public double getX() {
         return x;
