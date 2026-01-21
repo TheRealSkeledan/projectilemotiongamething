@@ -10,9 +10,9 @@ import javax.sound.sampled.*;
 import java.util.ArrayList;
 
 public class JustACircle {
-    public static final int fps = 5;
+    public static final int fps = 30;
     public static final double delta_t = 1.0 / fps;
-    public static final double g = -980.66;
+    public static final double g = -980;
     public static final int width = 1280;
     public static final int height = 720;
 
@@ -44,7 +44,9 @@ public class JustACircle {
 
     static double bgX1 = 0;
     static double bgX2 = width;
-    static double bgSpeed = 70;
+
+    static double obstacleSpeed = 800;
+    static double bgSpeed = 2000;
 
     static BufferedImage[] introFrames;
     static int introFrameIndex = 0;
@@ -55,12 +57,17 @@ public class JustACircle {
 
     static final double ENTITY_SCALE = 1.5;
 
+    static double bgScale;
+    static double bgW;
+
     enum GameState {
         WAITING_TO_START,
         INTRO,
         CHASE,
         DEAD
     }
+
+    static String[] introFramePaths;
 
     static GameState gameState = GameState.WAITING_TO_START;
 
@@ -88,21 +95,14 @@ public class JustACircle {
     }
 
     static void drawScrollingBackground() {
-        double bgScale = height / (double) backgroundImg.getHeight();
-        double bgW = backgroundImg.getWidth() * bgScale;
-
-        bgX1 -= bgSpeed;
-        bgX2 -= bgSpeed;
+        bgX1 -= bgSpeed * delta_t;
+        bgX2 -= bgSpeed * delta_t;
 
         if (bgX1 <= -bgW) bgX1 = bgX2 + bgW;
         if (bgX2 <= -bgW) bgX2 = bgX1 + bgW;
 
-        StdDraw.picture(bgX1 + bgW / 2, height / 2,
-                bgPath,
-                bgW, height);
-        StdDraw.picture(bgX2 + bgW / 2, height / 2,
-                bgPath,
-                bgW, height);
+        StdDraw.picture(bgX1 + bgW / 2, height / 2, bgPath, bgW, height);
+        StdDraw.picture(bgX2 + bgW / 2, height / 2, bgPath, bgW, height);
     }
 
     static void loadIntroSprites() {
@@ -118,12 +118,21 @@ public class JustACircle {
             int rows = sheet.getHeight() / frameH;
 
             introFrames = new BufferedImage[cols * rows];
+            introFramePaths = new String[cols * rows];
+
             int idx = 0;
 
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
-                    introFrames[idx++] =
-                            sheet.getSubimage(x * frameW, y * frameH, frameW, frameH);
+                    BufferedImage frame = sheet.getSubimage(x * frameW, y * frameH, frameW, frameH);
+                    introFrames[idx] = frame;
+
+                    File temp = File.createTempFile("introFrame_", ".png");
+                    ImageIO.write(frame, "png", temp);
+                    temp.deleteOnExit();
+
+                    introFramePaths[idx] = temp.getAbsolutePath();
+                    idx++;
                 }
             }
 
@@ -155,7 +164,7 @@ public class JustACircle {
         StdDraw.picture(
                 entity.x + 100,
                 entity.y,
-                tempImagePath(frame),
+                introFramePaths[introFrameIndex],
                 frame.getWidth() * ENTITY_SCALE,
                 frame.getHeight() * ENTITY_SCALE
         );
@@ -244,7 +253,7 @@ public class JustACircle {
         for (int i = obstacles.size() - 1; i >= 0; i--) {
             Obstacle o = obstacles.get(i);
 
-            o.x -= bgSpeed;
+            o.x -= obstacleSpeed * delta_t;
 
             StdDraw.picture(
                     o.x,
@@ -274,16 +283,17 @@ public class JustACircle {
         }
 
         entityAnimTimer += delta_t;
-        if (entityAnimTimer >= 0.1) {
+
+        while (entityAnimTimer >= 0.1) {
+            entityAnimTimer -= 0.1;
             entityFrameIndex = (entityFrameIndex + 1) % entityFrames.length;
-            entityAnimTimer = 0;
         }
 
         BufferedImage frame = entityFrames[entityFrameIndex];
         StdDraw.picture(
                 entity.x + 100,
                 entity.y,
-                tempImagePath(frame),
+                entityFramePaths[entityFrameIndex],
                 frame.getWidth() * ENTITY_SCALE,
                 frame.getHeight() * ENTITY_SCALE
         );
@@ -309,6 +319,11 @@ public class JustACircle {
             temp.deleteOnExit();
             bgPath = temp.getAbsolutePath();
 
+            bgScale = height / (double) backgroundImg.getHeight();
+            bgW = backgroundImg.getWidth() * bgScale;
+
+            bgX1 = 0;
+            bgX2 = bgW;
         } catch (Exception e) {
             System.out.println("Failed to load background image");
             e.printStackTrace();
@@ -370,19 +385,6 @@ public class JustACircle {
 
             StdDraw.show();
             StdDraw.pause(1000 / fps);
-        }
-    }
-
-    private static String tempImagePath(BufferedImage img) {
-        if (img == null) return null;
-
-        try {
-            File temp = File.createTempFile("img_", ".png");
-            ImageIO.write(img, "png", temp);
-            temp.deleteOnExit();
-            return temp.getAbsolutePath();
-        } catch (IOException e) {
-            return null;
         }
     }
 
